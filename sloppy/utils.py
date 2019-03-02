@@ -63,3 +63,36 @@ def show_compact_df(df, column_level=1):
                                 '<th class="rotate"><div><span>{0}</span></div></th>'.format(name))
 
     display(HTML(dfhtml))
+
+
+def memory_usage(df_or_series):
+    """
+    Returns the size of a DataFrame in megabytes.
+    """
+    if type(df_or_series)==pd.core.frame.DataFrame:
+        size = round(df_or_series.memory_usage(index=True, deep=True).sum()*1e-6,2)
+    elif type(df_or_series)==pd.core.frame.Series:
+        size = round(df_or_series.memory_usage(index=True, deep=True)*1e-6,2)
+
+    size_str = "{:,.2f}".format(size)
+    
+    return size_str
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
