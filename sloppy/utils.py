@@ -79,9 +79,40 @@ def memory_usage(df_or_series):
     return size_str
 
 
+def downcast_numeric_columns(df, column_type="int"):
+    """
 
+    """
+    max_string_length = max([len(col) for col in list_of_columns])
 
+    numeric_columns = full.select_dtypes('number').columns
+    int_columns     = full.select_dtypes('int').columns
+    float_columns   = full.select_dtypes('float').columns
 
+    for col in numeric_columns:
+        print("downcasting:", col.ljust(max_string_length), 'from', memory_usage(df[col]).rjust(8), end=' ')
+        if col in int_columns:
+            df[col] = pd.to_numeric(df[col], downcast="integer")
+        elif col in float_columns:
+            df[col] = pd.to_numeric(df[col], downcast="float")
+        print(memory_usage(df[col]).rjust(8))
+        
+    return df
+
+def set_learning_rate_with_resets(iteration, start=0.1, min_learning_rate=0.001, decay=0.99, reset_every=100, verbose=False):
+    """
+    LGB suitable learning rate decay
+    Returns a decaying learning rate that will be reset to higher values at intervals.
+    This can help to overcome local minima.
+    """
+    if reset_every!=None:
+        rate = max(min_learning_rate, round(start * (decay ** ((iteration%reset_every)+1)),6))
+        if verbose and iteration==reset_every: print("reset  ")
+    else:
+        rate = max(min_learning_rate, round(start * (decay ** iteration),6))
+        if verbose: print(rate, end="\t")
+
+    return rate
 
 
 
