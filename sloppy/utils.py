@@ -99,20 +99,20 @@ def downcast_numeric_columns(df, column_type="int"):
         
     return df
 
-def set_learning_rate_with_resets(iteration, start=0.1, min_learning_rate=0.001, decay=0.99, reset_every=100, verbose=False):
-    """
-    LGB suitable learning rate decay
-    Returns a decaying learning rate that will be reset to higher values at intervals.
-    This can help to overcome local minima.
-    """
-    if reset_every!=None:
-        rate = max(min_learning_rate, round(start * (decay ** ((iteration%reset_every)+1)),6))
-        if verbose and iteration==reset_every: print("reset  ")
-    else:
-        rate = max(min_learning_rate, round(start * (decay ** iteration),6))
-        if verbose: print(rate, end="\t")
 
-    return rate
+def del_columns(df, columns):
+    """
+    Deletes columns one by one from the DataFrame. Easier to use during development compared to df.drop(columns)
+    """
+    
+    for column in columns:
+        if column in df.columns:
+            del df[column]
+            print("Deleted:          ", column)
+        else:
+            print("Not in DataFrame: ",column)
+    
+    return df
 
 
 
