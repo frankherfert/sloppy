@@ -50,4 +50,19 @@ def round_to_nearest_int(value, base=25):
 
 
 
+def cont_feature_correlation(df, columns:list):
+    """
+    Calculates correlation for continous features.
+    """
+    correlations = df.loc[:, columns].corr().abs().unstack().sort_values(kind="quicksort").reset_index()
+    correlations = correlations[correlations['level_0'] != correlations['level_1']]
+    
+    correlations.columns = ['feat_1', 'feat_2', 'correlation']
 
+    correlations['features'] = correlations['feat_1'] + '<>' + correlations['feat_2']
+    correlations['features'] = correlations['features'].apply(lambda s: ' <> '.join( sorted(s.split('<>'))))
+    
+    correlations = correlations.sort_values(['feat_1', 'feat_2'])
+    correlations = correlations.drop_duplicates('features')
+    correlations = correlations.loc[:, ['feat_1', 'feat_2', 'features', 'correlation']]
+    return correlations
