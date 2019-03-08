@@ -28,18 +28,17 @@ def show_compact_df(df, column_level=1):
     """
     requires 'from IPython.core.display import display, HTML'
     """
+    max_col_length = len(max(df.columns, key=len))
     
     style = """
         <style>
         th.rotate {
-            /* Something you can count on */
-            height: 140px;
+            height: height_strpx;
             white-space: nowrap;
         }
 
         th.rotate > div {
             transform: 
-                /* Magic Numbers */
                 translate(25px, 51px)
                 rotate(315deg);
             width: 30px;
@@ -49,7 +48,7 @@ def show_compact_df(df, column_level=1):
             border-bottom: 1px solid #ccc;
             padding: 5px 10px;
         }
-        </style>"""
+        </style>""".replace('height_str', '140') #str(15*max_col_length))
 
     dfhtml = style + df.to_html()
 
@@ -63,20 +62,6 @@ def show_compact_df(df, column_level=1):
                                 '<th class="rotate"><div><span>{0}</span></div></th>'.format(name))
 
     display(HTML(dfhtml))
-
-
-def memory_usage(df_or_series):
-    """
-    Returns the size of a DataFrame in megabytes.
-    """
-    if type(df_or_series)==pd.core.frame.DataFrame:
-        size = round(df_or_series.memory_usage(index=True, deep=True).sum()*1e-6,2)
-    elif type(df_or_series)==pd.core.frame.Series:
-        size = round(df_or_series.memory_usage(index=True, deep=True)*1e-6,2)
-
-    size_str = "{:,.2f}".format(size)
-    
-    return size_str
 
 
 def downcast_numeric_columns(df, column_type="int"):
@@ -115,14 +100,65 @@ def del_columns(df, columns):
     return df
 
 
+#### Files
+def convert_bytes(num):
+    """
+    this function will convert bytes to MB.... GB... etc
+    """
+    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
+        if num < 1024.0:
+            return "%3.2f %s" % (num, x)
+        num /= 1024.0
 
 
+def get_file_size(file_path):
+    """
+    this function will return the file size
+    """
+    if os.path.isfile(file_path):
+        file_info = os.stat(file_path)
+        return convert_bytes(file_info.st_size)
 
 
+def show_path_file_sizes(path):
+    """
+    Shows sizes for all files in path
+    """
+    files = os.listdir(path)
+    max_len = len(max(files, key=len))
+    
+    for f in files:
+        print(f.ljust(max_len), get_file_size(f'{path}/{f}'))  
 
 
+def memory_usage(df_or_series):
+    """
+    Returns the size of a DataFrame in megabytes.
+    """
+    if type(df_or_series)==pd.core.frame.DataFrame:
+        size = round(df_or_series.memory_usage(index=True, deep=True).sum(),2)
+    elif type(df_or_series)==pd.core.frame.Series:
+        size = round(df_or_series.memory_usage(index=True, deep=True),2)
+    
+    return convert_bytes(size)
 
 
+def get_features_list(df, prefix:str = 'cont', suffix:str=None, sort_results = True):
+    """
+    Returns list of continous or categorical features from DataFrame.
+    :prefix: 'cont' or 'catg'
+    """
+    
+    column_list = [col for col in df.columns if col.startswith(prefix)]
+    
+    if suffix:
+        column_list = [col for col in column_list
+                       if ((col.find(suffix)>0) or (col.endswith(suffix)))]
+    
+    if sort_results:
+        column_list = sorted(column_list)
+    
+    return column_list
 
 
 
