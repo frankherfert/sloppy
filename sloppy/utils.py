@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 from IPython.core.display import display, HTML
 
 
@@ -13,9 +14,9 @@ def set_pd_options():
             'precision': 6,
             'show_dimensions': False
         },
-        'mode': {
-            'chained_assignment': None   # Controls SettingWithCopyWarning
-        }
+        # 'mode': {
+        #     'chained_assignment': None   # Controls SettingWithCopyWarning
+        # }
     }
 
     for category, option in options.items():
@@ -68,11 +69,11 @@ def downcast_numeric_columns(df, column_type="int"):
     """
 
     """
-    max_string_length = max([len(col) for col in list_of_columns])
+    numeric_columns = df.select_dtypes('number').columns
+    int_columns     = df.select_dtypes('int').columns
+    float_columns   = df.select_dtypes('float').columns
 
-    numeric_columns = full.select_dtypes('number').columns
-    int_columns     = full.select_dtypes('int').columns
-    float_columns   = full.select_dtypes('float').columns
+    max_string_length = max([len(col) for col in numeric_columns])
 
     for col in numeric_columns:
         print("downcasting:", col.ljust(max_string_length), 'from', memory_usage(df[col]).rjust(8), end=' ')
