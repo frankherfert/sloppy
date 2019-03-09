@@ -1,15 +1,28 @@
 import pandas as pd
 import numpy as np
 
+def show_missing(df, columns:list = None):
+    """
+    Shows number and percentage of rows with missing values.
+    """
+    total = df.isnull().sum()
+    percent = np.round((df.isnull().sum()/df.isnull().count()*100), 4)
+    
+    tt = pd.concat([total, percent], axis=1, keys=['missing', 'percent'])
+    types = []
+    
+    for col in df.columns:
+        dtype = str(df[col].dtype)
+        types.append(dtype)
+    tt['Types'] = types
+    return tt
+
 
 def add_isnull_columns(df, columns, min_percentage=0.01, verbose=True):
     """
     Adds new columns with 0/1 flags for missing values.
     :min_percentage: Minimum percentage of missing values in a column needed to create a new '_isnull' column
     """
-    if verbose: 
-        print("adding '_isnull' columns...")
-    
     max_col_length = len(max(columns, key=len))
     
     for column in columns:
@@ -20,7 +33,7 @@ def add_isnull_columns(df, columns, min_percentage=0.01, verbose=True):
         null_pctg_str  = '{:.2f}%'.format(null_pctg*100)
         
         if verbose:
-            print(f'missing in {column.ljust(max_col_length)}: {null_count_str} ({null_pctg_str})')
+            print(f"add '_isnull' column for: {column.ljust(max_col_length)} \t missing: {null_count_str} ({null_pctg_str})")
 
         if null_pctg > min_percentage:
             col_name = f'cont_{column}__isnull'
