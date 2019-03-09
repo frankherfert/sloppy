@@ -52,7 +52,7 @@ def add_count_encoding(df, column_combinations: list, scaler: 'sklearn.preproces
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")     
 
-                counts = scaler.fit_transform(counts);
+                counts = scaler.fit_transform(counts); # suppress warnings
                 scaler_str = str(type(scaler)).split('.')[-1].split('Scaler')[0].split('Transformer')[0].lower()
                 new_column_name = f'{new_column_name}_scaled_{scaler_str}'
             
@@ -108,7 +108,7 @@ def add_label_encoding(df, column_combinations: list, min_count = 5,
                       )
         
         if drop_orig_cols:
-            df = df.drop(cols, axis=1)
+            df = df.drop(col_combo, axis=1)
     
     df = df.drop('tmp', axis=1)
 
@@ -143,6 +143,7 @@ def add_one_hot_encoding(df, columns: list, min_pctg_to_keep=0.03, verbose=True)
 def target_encode_smooth_mean(df, catg_columns:list, target_col:str, train_index, 
                               smoothing_factor=3, std_noise_factor=0.01, verbose=True):
     """
+    Add smoothed mean target encoding.
     """
     max_col_length = len(max(catg_columns, key=len))    
     
@@ -181,7 +182,6 @@ def target_encode_smooth_mean(df, catg_columns:list, target_col:str, train_index
                 
                 # add column with scaled standard deviation
                 stds_df = pd.DataFrame(stds).reset_index().rename(columns={'std':'tmp_stds_with_noise'})
-                display(stds_df)
                 df = pd.merge(df, stds_df, how='left', on=col)
                 df['tmp_stds_with_noise'] = df['tmp_stds_with_noise']*std_noise_factor
         
