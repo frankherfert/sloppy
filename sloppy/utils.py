@@ -1,6 +1,7 @@
 import pandas as pd
 import os
 from IPython.core.display import display, HTML
+import datetime
 
 
 def set_pd_options():
@@ -162,5 +163,10 @@ def get_features_list(df, prefix:str = 'cont', suffix:str=None, sort_results = T
     return column_list
 
 
-
+def get_datetime_str(up_to='second'):
+    if up_to=='second':
+        s = str(datetime.datetime.now())[0:19]
+        
+    s = s.replace('-', '').replace(' ', '_').replace(':', '')
+    return s
 
