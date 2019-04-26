@@ -2,6 +2,24 @@ import pandas as pd
 import numpy as np
 
 
+def add_cont_prefix(df, columns: list, drop_orig_cols=False, return_new_col_names=False, verbose=True):
+    """
+    Adds a 'cont_' prefix to columns with continous features.
+    """
+    new_column_names = []
+
+    for col in columns:
+        new_col_name = 'cont_'+col
+        #col_name = col_name.replace('cont_cont_', 'cont_')
+        df[new_col_name] = df[col]
+        new_column_names.append(new_col_name)
+
+    if return_new_col_names:
+        return df, new_column_names
+    else:
+        return df
+
+
 def add_log1p(df, columns: list, verbose=True):
     """
     """
@@ -9,12 +27,12 @@ def add_log1p(df, columns: list, verbose=True):
     for col in columns:
         new_column_name = 'cont_' + col + '__log1p' 
         
-        df[new_column_name] = np.log1p(df[col])
+        df[new_column_name] = np.log1p(df[col].clip(0,))
         
         if verbose: print('added continous log1p column: ', 
-                          '| min',  str( df[new_column_name].min() ).rjust(5),
-                          '| max',  str( df[new_column_name].max() ).rjust(5),
-                         '\t', new_column_name)
+                          '| min',  str( round(df[new_column_name].min(),2) ).rjust(5),
+                          '| max',  str( round(df[new_column_name].max(),2) ).rjust(5),
+                          '\t', new_column_name)
     
     return df
 
