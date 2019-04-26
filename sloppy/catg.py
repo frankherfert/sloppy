@@ -12,16 +12,17 @@ def convert_to_pd_catg(df, columns: list, verbose=True) -> pd.DataFrame:
     """
     for col in columns:
         try:
+            if verbose: print('convert to categorical:', col, end=' ')
             df[col]  = df[col].astype('category')
-            if verbose: print('converted to categorical:', col)
+            if verbose: print('ok')
         except:
-            print('error for               :', col)
+            print(            'error for             :', col)
 
     return df
 
 
 def add_count_encoding(df, column_combinations: list, scaler: 'sklearn.preprocessing. ...' = None,
-                       verbose = True, drop_orig_cols=False):
+                       verbose = True, drop_orig_cols=False) -> pd.DataFrame:
     """
     Expects a DataFrame with no missing values in specified columns.
     Creates new columns for every column combination (one or more columns to be combined).
@@ -33,7 +34,7 @@ def add_count_encoding(df, column_combinations: list, scaler: 'sklearn.preproces
     :drop_orig_cols:        drop original columns after count-encoding
     """
 
-    # create temp-column with no missing values, used for counting
+    # create temporary column with no missing values, used for counting
     df['tmp'] = 1
     
     for cols in column_combinations:
@@ -44,6 +45,8 @@ def add_count_encoding(df, column_combinations: list, scaler: 'sklearn.preproces
             var_name = cols
         
         new_column_name = 'cont_' + var_name + '__count' 
+        
+        if verbose: print('add categorical column count:', new_column_name.ljust(60), end = ' ')
         
         # groupby count transform
         counts = df.groupby(cols)['tmp'].transform('count').values.reshape(-1, 1)#.astype(int)
@@ -58,11 +61,9 @@ def add_count_encoding(df, column_combinations: list, scaler: 'sklearn.preproces
             
         df[new_column_name] = counts
 
-        if verbose: print('added categorical column count: ', 
-                          'unique', str( df[new_column_name].nunique() ).rjust(5), 
+        if verbose: print('unique', str( df[new_column_name].nunique() ).rjust(5), 
                           '| min',  str( df[new_column_name].min()     ).rjust(5),
-                          '| max',  str( df[new_column_name].max()     ).rjust(5),
-                         '\t', new_column_name)
+                          '| max',  str( df[new_column_name].max()     ).rjust(5))
         
         if drop_orig_cols:
             df = df.drop(cols, axis=1)
@@ -85,13 +86,17 @@ def add_label_encoding(df, column_combinations: list, min_count = 5,
         col_str = '_'.join(col_combo) if isinstance(col_combo, list) else col_combo
         new_column_name = 'catg_' + col_str + '__label'
         
+        if verbose: print('add label encoding:', new_column_name.ljust(50), end=' ')
+                
         # if label encoding for column combination, use groupby.transform to get unique values per combination
         # if single column, use values directly
         if isinstance(col_combo, list):
-            column_values = df.groupby(col_combo)[col_combo[0]].transform(lambda series: random.random)
+            #if verbose: print('using groupby with random values', end=', ')
+            column_values = df.groupby(col_combo)[col_combo[0]].transform(lambda series: random.random())
         else:
             column_values = df[col_combo].copy()
-
+        #df['column_values'] = column_values
+        
         # determine low-count outliers, replace with '00000'
         col_counts = df.groupby(col_combo)['tmp'].transform("count")
         column_values = np.where(col_counts < min_count, '00000', column_values)
@@ -100,12 +105,7 @@ def add_label_encoding(df, column_combinations: list, min_count = 5,
         label_encoder = preprocessing.LabelEncoder()
         df[new_column_name] = label_encoder.fit_transform(column_values)
 
-        if verbose:
-            print('added label encoding:',
-                  'unique:', str(len(df[col_combo].unique())).ljust(7),
-                  'labels:', str(len(df[new_column_name].unique())).ljust(7),
-                  new_column_name.ljust(20)      
-                      )
+        if verbose: print('unique:', str(len(df[new_column_name].unique())).ljust(7))
         
         if drop_orig_cols:
             df = df.drop(col_combo, axis=1)
@@ -115,6 +115,7 @@ def add_label_encoding(df, column_combinations: list, min_count = 5,
     return df
 
 
+# remove duplicate columns when applying twice
 def add_one_hot_encoding(df, columns: list, min_pctg_to_keep=0.03, verbose=True):
     """
     Adds one-hot encoded columns for each categorical column
@@ -122,8 +123,13 @@ def add_one_hot_encoding(df, columns: list, min_pctg_to_keep=0.03, verbose=True)
     max_col_length = len(max(columns, key=len))
     
     for column in columns:
+            
         #df[column]    = df[column].apply(lambda x: str(x)) #convert to str just in case
         #new_columns = [column + "_" + i for i in full[column].unique()] #only use the columns that appear in the test set and add prefix like in get_dummies
+        if verbose: print('add one-hot-encodings:', column.ljust(max_col_length), end=' ')
+        if df[column].nunique() > 500:
+            print(' - too many unique values', df[column].nunique())
+            break
         
         one_hot_df = pd.get_dummies(df[column], prefix=f'cont_{column}__one_hot_')
         orig_col_number = len(one_hot_df.columns)
@@ -131,9 +137,7 @@ def add_one_hot_encoding(df, columns: list, min_pctg_to_keep=0.03, verbose=True)
         keep = (one_hot_df.sum()/len(one_hot_df))>=min_pctg_to_keep
         one_hot_df = one_hot_df.loc[:, keep]
 
-        if verbose:
-            print('added one-hot-encodings:', column.ljust(max_col_length),
-             f'  -  keep {len(one_hot_df.columns)}/{orig_col_number} one-hot columns')
+        if verbose: print(f' - keep {len(one_hot_df.columns)}/{orig_col_number} one-hot columns')
    
         df = pd.concat((df, one_hot_df), axis = 1)
    
