@@ -66,15 +66,15 @@ def show_compact_df(df, column_level=1):
     display(HTML(dfhtml))
 
 
-def downcast_numeric_columns(df, column_type="int"):
+def downcast_numeric_columns(df, columns=[]):
     """
 
     """
-    numeric_columns = df.select_dtypes('number').columns
-    int_columns     = df.select_dtypes('int').columns
-    float_columns   = df.select_dtypes('float').columns
+    numeric_columns = df.loc[:, columns].select_dtypes('number').columns.tolist()
+    int_columns     = df.loc[:, columns].select_dtypes('int').columns.tolist()
+    float_columns   = df.loc[:, columns].select_dtypes('float').columns.tolist()
 
-    max_string_length = max([len(col) for col in numeric_columns])
+    max_string_length = max([len(col) for col in numeric_columns])+2
 
     for col in numeric_columns:
         print("downcasting:", col.ljust(max_string_length), 'from', memory_usage(df[col]).rjust(8), end=' ')
@@ -161,6 +161,14 @@ def get_features_list(df, prefix:str = 'cont', suffix:str=None, sort_results = T
         column_list = sorted(column_list)
     
     return column_list
+
+
+def clean_feature_names(df, include: 'list or all'='all', exclude:list = None) -> pd.DataFrame:
+    """
+    Cleans feature names for easier column handling
+    - replaces whitespaces and special character with underscores
+    - removes duplicate prefixes
+    """
 
 
 def get_datetime_str(up_to='second'):
