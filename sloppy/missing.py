@@ -33,7 +33,7 @@ def add_isnull_columns(df, columns, min_percentage=0.01, verbose=True):
         null_pctg_str  = '{:.2f}%'.format(null_pctg*100)
         
         if verbose:
-            print(f"add '_isnull' column for: {column.ljust(max_col_length)} \t missing: {null_count_str} ({null_pctg_str})")
+            print(f"add '_isnull' column for: {column.ljust(max_col_length)} \t missing: {str(null_count_str).rjust(7)} ({str(null_pctg_str).rjust(6)})")
 
         if null_pctg > min_percentage:
             col_name = f'cont_{column}__isnull'
