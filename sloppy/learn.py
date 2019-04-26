@@ -24,17 +24,17 @@ def set_learning_rate_with_resets(iteration, start=0.1, min_learning_rate=0.001,
     return rate
 
 
-def get_out_of_fold_train_test_predictions(clf, kfolds, x_train, y, x_test):
+def predict_out_of_fold_sklearn(est, n_splits, x_train, y, x_test):
     oof_train = np.zeros((x_train.shape[0],))
-    oof_test = np.zeros( (x_test.shape[0] ,))
-    oof_test_skf = np.empty((kfolds.n_folds, x_test.shape[0]))
+    oof_test  = np.zeros( (x_test.shape[0] ,))
+    oof_test_skf = np.empty((n_splits, x_test.shape[0]))
+    
     print("gettings out of fold predictions for:\n",
           "x_train", str(x_train.shape).ljust(20), type(x_train), "\n",
-          "y      ", str(y.shape).ljust(20),       type(y),       "\n",
-          "x_test ", str(x_test.shape).ljust(20),  type(x_test),  "\n")
+          "y      ", str(y.shape      ).ljust(20), type(y),       "\n",
+          "x_test ", str(x_test.shape ).ljust(20), type(x_test),  "\n")
 
     # if input is sparse, no need to transform
-    
     if type(x_train)==pd.core.frame.DataFrame:
         x_train = x_train.values
     
@@ -45,18 +45,21 @@ def get_out_of_fold_train_test_predictions(clf, kfolds, x_train, y, x_test):
         #print("y is df or series")
         y = y.values.ravel()
         
-    for i, (train_index, test_index) in enumerate(kfolds):
-        print(str(datetime.datetime.now())[:19], "\t Fold:", i+1, #end=", "
+    folds = model_selection.KFold(n_splits=n_splits, shuffle=True, random_state=41
+                                 ).split(x_train, y)
+        
+    for i, (train_index, test_index) in enumerate(folds):
+        print(str(datetime.datetime.now())[:19], "\t Fold:", str(i+1).rjust(3), end=", "
              )
         x_tr = x_train[train_index]
         y_tr = y[train_index]
         x_te = x_train[test_index]
         
-        clf.train(x_tr, y_tr)
+        est.fit(x_tr, y_tr)
         print("training done", end=", ")
         
-        oof_train[test_index] = clf.predict(x_te)
-        oof_test_skf[i, :] = clf.predict(x_test)
+        oof_train[test_index] = est.predict(x_te)
+        oof_test_skf[i, :] = est.predict(x_test)
         print("predicting done")
         gc.collect()
     
@@ -65,8 +68,8 @@ def get_out_of_fold_train_test_predictions(clf, kfolds, x_train, y, x_test):
     return oof_train.reshape(-1, 1), oof_test.reshape(-1, 1)
 
 
-def predict_out_of_fold(df, train_index, predict_index, target:str, features:list, n_splits:int = 5, oof_preds_col_suffix='_model_1',
-                        est=None, model_init_parameters:dict = None, model_fit_parameters:dict = None):
+def predict_out_of_fold_lgb(df, train_index, predict_index, target:str, features:list, n_splits:int = 5, oof_preds_col_suffix='_model_1',
+                            est=None, model_init_parameters:dict = None, model_fit_parameters:dict = None):
     """
     Creates out of fold predictions using LightGBM.
     Returns: source df with added predictions, model_importances
