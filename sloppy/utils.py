@@ -169,6 +169,14 @@ def clean_feature_names(df, include: 'list or all'='all', exclude:list = None) -
     - replaces whitespaces and special character with underscores
     - removes duplicate prefixes
     """
+    if include=='all':
+        new_columns = [col.replace('cont_cont_', 'cont_').replace('-', '_') for col in df.columns]
+
+        df.columns = new_columns
+    else:
+        print('not implemented yet')
+    
+    return df
 
 
 def get_datetime_str(up_to='second'):
