@@ -1,11 +1,13 @@
 import pandas as pd
 import numpy as np
-from sklearn import model_selection
+from sklearn import model_selection, metrics
 import datetime
 import gc
 
 
-def set_learning_rate_with_resets(iteration, start=0.1, min_learning_rate=0.001, decay=0.99, reset_every=None, verbose=False):
+def set_learning_rate_with_resets(
+    iteration, start=0.1, min_learning_rate=0.001, decay=0.99,
+    reset_every=None, verbose=False):
     """
     LGB suitable learning rate decay
     Returns a decaying learning rate that will be reset to higher values at intervals.
@@ -13,8 +15,8 @@ def set_learning_rate_with_resets(iteration, start=0.1, min_learning_rate=0.001,
 
     Use with: learning_rates = lambda iter: set_learning_rate_with_resets()
     """
-    if reset_every!=None:
-        rate = max(min_learning_rate, round(start * (decay ** ((iteration%reset_every)+1)),6))
+    if reset_every is not None:
+        rate = max(min_learning_rate, round(start * (decay ** ((iteration % reset_every)+1)),6))
     else:
         rate = max(min_learning_rate, round(start * (decay ** iteration),6))
 
@@ -26,7 +28,7 @@ def set_learning_rate_with_resets(iteration, start=0.1, min_learning_rate=0.001,
 
 def predict_out_of_fold_sklearn(est, n_splits, x_train, y, x_test):
     oof_train = np.zeros((x_train.shape[0],))
-    oof_test  = np.zeros( (x_test.shape[0] ,))
+    oof_test  = np.zeros((x_test.shape[0] ,))
     oof_test_skf = np.empty((n_splits, x_test.shape[0]))
     
     print("gettings out of fold predictions for:\n",
@@ -123,7 +125,14 @@ def predict_out_of_fold_lgb(df, train_index, predict_index, target:str, features
     return df, model_importances
 
 
-
+def score_binary_predictions(y_true, y_pred):
+    y_pred_01 = np.round(y_pred,0)
+    print("# \t", 
+    #"roc auc ↑:",   round(metrics.roc_auc_score( y_true=y_true, y_score= y_pred),    4),
+          "F1 ↑:",       round(metrics.f1_score(      y_true=y_true, y_pred=  y_pred_01), 4),
+          "\t accuracy ↑:", round(metrics.accuracy_score(y_true=y_true, y_pred=  y_pred_01), 4),
+          "\t log loss ↓:", round(metrics.log_loss(      y_true=y_true, y_pred=  y_pred),    4)
+         )
 
 
 
