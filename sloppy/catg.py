@@ -134,11 +134,13 @@ def add_one_hot_encoding(df, columns: list, min_pctg_to_keep=0.03, verbose=True)
         one_hot_df = pd.get_dummies(df[column], prefix=f'cont_{column}__one_hot_')
         orig_col_number = len(one_hot_df.columns)
         
-        keep = (one_hot_df.sum()/len(one_hot_df))>=min_pctg_to_keep
-        one_hot_df = one_hot_df.loc[:, keep]
+        keep_cols  = (one_hot_df.sum()/len(one_hot_df))>=min_pctg_to_keep
+        one_hot_df = one_hot_df.loc[:, keep_cols]
 
         if verbose: print(f' - keep {len(one_hot_df.columns)}/{orig_col_number} one-hot columns')
    
+        # drop columns if they already exist, in case function is called twice
+        df = df.drop(one_hot_df.columns, axis=1, errors='ignore')
         df = pd.concat((df, one_hot_df), axis = 1)
    
     return df
