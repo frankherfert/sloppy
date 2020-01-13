@@ -71,13 +71,13 @@ def predict_out_of_fold_sklearn(est, n_splits, x_train, y, x_test):
 
 
 def predict_out_of_fold_lgb(df, train_index, predict_index, target:str, features:list, n_splits:int = 5, oof_preds_col_suffix='_model_1',
-                            est=None, model_init_parameters:dict = None, model_fit_parameters:dict = None):
+                            est=None, model_init_params:dict = None, model_fit_params:dict = None):
     """
     Creates out of fold predictions using LightGBM.
     Returns: source df with added predictions, model_importances
     """
     
-    model = est(**model_init_parameters)
+    model = est(**model_init_params)
     model_importances = pd.DataFrame({'feature':features})
 
     #train_oof_preds = np.zeros(len(train_index))
@@ -101,14 +101,16 @@ def predict_out_of_fold_lgb(df, train_index, predict_index, target:str, features
               end='\t')
         
         # train on train-part of dataset
-        model.fit(X_train, y_train, eval_set=[(X_valid, y_valid)], #eval_names=('\t test') #[(X_train, y_train), (X_valid, y_valid)], 
-                  **model_fit_parameters)
+        model.fit(X_train, y_train, eval_set=[(X_valid, y_valid)], 
+                  #eval_names=('\t test') #[(X_train, y_train), (X_valid, y_valid)], 
+                  **model_fit_params)
         print('early stopping:', model.best_iteration_)
 
         model_importances[f'imp_{n_fold}'] = model.feature_importances_
 
         # assign predictions to validation part
         oof_preds = model.predict(X_valid, num_iteration=model.best_iteration_)
+        print('mean:', oof_preds.mean())
         df.loc[train_index[fold_valid_index], oof_preds_col] = oof_preds
         #df.loc[train_index[fold_valid_index], 'train_oof_fold' ] = n_fold
         
@@ -126,13 +128,11 @@ def predict_out_of_fold_lgb(df, train_index, predict_index, target:str, features
 
 
 def score_binary_predictions(y_true, y_pred):
-    y_pred_01 = np.round(y_pred,0)
+    y_pred_01 = np.round(y_pred, 0)
     print("# \t", 
-    #"roc auc ↑:",   round(metrics.roc_auc_score( y_true=y_true, y_score= y_pred),    4),
-          "F1 ↑:",       round(metrics.f1_score(      y_true=y_true, y_pred=  y_pred_01), 4),
+          "roc auc ↑:",     round(metrics.roc_auc_score( y_true=y_true, y_score= y_pred),    4),
+          "F1 ↑:",          round(metrics.f1_score(      y_true=y_true, y_pred=  y_pred_01), 4),
           "\t accuracy ↑:", round(metrics.accuracy_score(y_true=y_true, y_pred=  y_pred_01), 4),
           "\t log loss ↓:", round(metrics.log_loss(      y_true=y_true, y_pred=  y_pred),    4)
          )
-
-
 
