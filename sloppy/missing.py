@@ -18,13 +18,14 @@ def show_missing(df, columns:list = None):
     return tt
 
 
-def add_isnull_columns(df, columns, min_percentage=0.01, verbose=True):
+def add_isnull_columns(df, columns, min_percentage=0.01, return_new_cols=False, verbose=True):
     """
     Adds new columns with 0/1 flags for missing values.
     :min_percentage: Minimum percentage of missing values in a column needed to create a new '_isnull' column
     """
     max_col_length = len(max(columns, key=len))
-    
+    new_cols = []
+
     for column in columns:
         null_count = df[column].isnull().sum()
         null_pctg  = null_count / len(df)
@@ -38,8 +39,12 @@ def add_isnull_columns(df, columns, min_percentage=0.01, verbose=True):
         if null_pctg > min_percentage:
             col_name = f'cont_{column}__isnull'
             df[col_name] = np.where(df[column].isnull(), 1, 0)
+            new_cols.append(col_name)
 
-    return df
+    if return_new_cols:
+        return df, new_cols
+    else:
+        return df
 
 
 def fillna_categorical(df, columns:list, fill_value:str = 'MISSING', verbose=True):
