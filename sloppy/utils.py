@@ -26,7 +26,7 @@ def set_pd_options():
     print('pandas options updated')
 
 
-def show_compact_df(df, column_level=1):    
+def display_df(df, column_level=1):    
     """
     requires 'from IPython.core.display import display, HTML'
     """
@@ -144,7 +144,7 @@ def memory_usage(df_or_series):
     
     return convert_bytes(size)
 
-
+### features
 def get_features_list(df, prefix:str = 'cont', suffix:str=None, sort_results = True):
     """
     Returns list of continous or categorical features from DataFrame.
@@ -178,7 +178,7 @@ def clean_feature_names(df, include: 'list or all'='all', exclude:list = None) -
     
     return df
 
-
+### rest
 def get_datetime_str(up_to='second'):
     if up_to=='second':
         s = str(datetime.datetime.now())[0:19]
