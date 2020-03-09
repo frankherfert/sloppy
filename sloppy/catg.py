@@ -10,19 +10,21 @@ def convert_to_pd_catg(df, columns: list, verbose=True) -> pd.DataFrame:
     Converts all columns to pandas categorical type.
     Enables additional functions and more memory-efficient data handling.
     """
+    if verbose: print('converting to categorical...')
     for col in columns:
         try:
-            if verbose: print('convert to categorical:', col, end=' ')
+            if verbose: print(f'- {col}', end=' ')
             df[col]  = df[col].astype('category')
             if verbose: print('ok')
         except:
-            print(            'error for             :', col)
+            print(' error')
 
     return df
 
 
-def add_count_encoding(df, column_combinations: list, scaler: 'sklearn.preprocessing. ...' = None,
-                       verbose = True, drop_orig_cols=False) -> pd.DataFrame:
+def create_count_encoding(df, column_combinations: list, scaler: 'sklearn.preprocessing. ...' = None,
+                       verbose = True, return_new_cols = True,
+                       drop_orig_cols=False) -> pd.DataFrame:
     """
     Expects a DataFrame with no missing values in specified columns.
     Creates new columns for every column combination (one or more columns to be combined).
@@ -30,23 +32,23 @@ def add_count_encoding(df, column_combinations: list, scaler: 'sklearn.preproces
     :df:                    DataFrame
     :column_combinations:   list of single or multiple columns,
                             eg.: ['country', 'product', ['country', 'product']]
-    :scaler:                sklearn sccaler for normalization
+    :scaler:                sklearn scaler for normalization
     :drop_orig_cols:        drop original columns after count-encoding
     """
 
     # create temporary column with no missing values, used for counting
     df['tmp'] = 1
     
+    new_cols = []
+    
+    if verbose: print('adding categorical counts...')
     for cols in column_combinations:
         # set name suffix for new column
-        if isinstance(cols, list):
-            var_name = '_'.join(cols)
-        else:
-            var_name = cols
+        if isinstance(cols, list): var_name = '_'.join(cols)
+        else:                      var_name = cols
         
-        new_column_name = 'cont_' + var_name + '__count' 
-        
-        if verbose: print('add categorical column count:', new_column_name.ljust(60), end = ' ')
+        new_column_name = 'ft_' + var_name + '__count' 
+        if verbose: print(new_column_name.ljust(60), end = ' ')
         
         # groupby count transform
         counts = df.groupby(cols)['tmp'].transform('count').values.reshape(-1, 1)#.astype(int)
@@ -65,38 +67,45 @@ def add_count_encoding(df, column_combinations: list, scaler: 'sklearn.preproces
                           '| min',  str( df[new_column_name].min()     ).rjust(5),
                           '| max',  str( df[new_column_name].max()     ).rjust(5))
         
-        if drop_orig_cols:
-            df = df.drop(cols, axis=1)
+        if drop_orig_cols: df = df.drop(cols, axis=1)
+        
+        new_cols.append(new_column_name)
     
     df = df.drop('tmp', axis=1)
-    return df
+    
+    if return_new_cols: return df, new_cols
+    else:               return df
 
 
-def add_label_encoding(df, column_combinations: list, min_count = 5, 
-                       drop_orig_cols = False, verbose = True):
+def create_label_encoding(df, column_combinations: list, min_count = 5, 
+                       drop_orig_cols = False, return_new_cols = True, 
+                       verbose = True):
     """
     Add numerical labels for categorical values.
     Values under a specified low total count are grouped together as '0'
     """
     #max_col_length = len(max(columns, key=len))
+    
+    new_cols = []
+    
     df['tmp'] = 1
 
+    if verbose: print('adding label encoding...')
     # set name suffix for new column
     for col_combo in column_combinations:
         col_str = '_'.join(col_combo) if isinstance(col_combo, list) else col_combo
-        new_column_name = 'catg_' + col_str + '__label'
+        new_column_name = 'ft_' + col_str + '__label'
+        new_cols.append(new_column_name)
         
-        if verbose: print('add label encoding:', new_column_name.ljust(50), end=' ')
-                
+        if verbose: print('-', new_column_name.ljust(50), end=' ')
+        
         # if label encoding for column combination, use groupby.transform to get unique values per combination
         # if single column, use values directly
         if isinstance(col_combo, list):
-            #if verbose: print('using groupby with random values', end=', ')
             column_values = df.groupby(col_combo)[col_combo[0]].transform(lambda series: random.random())
         else:
             column_values = df[col_combo].copy()
-        #df['column_values'] = column_values
-        
+                
         # determine low-count outliers, replace with '00000'
         col_counts = df.groupby(col_combo)['tmp'].transform("count")
         column_values = np.where(col_counts < min_count, '00000', column_values)
@@ -105,25 +114,25 @@ def add_label_encoding(df, column_combinations: list, min_count = 5,
         label_encoder = preprocessing.LabelEncoder()
         df[new_column_name] = label_encoder.fit_transform(column_values)
 
-        if verbose: print('unique:', str(len(df[new_column_name].unique())).ljust(7))
+        if verbose: print('unique:', str(df[new_column_name].nunique()).ljust(7))
         
-        if drop_orig_cols:
-            df = df.drop(col_combo, axis=1)
+        if drop_orig_cols: df = df.drop(col_combo, axis=1)
     
     df = df.drop('tmp', axis=1)
 
-    return df
+    if return_new_cols: return df, new_cols
+    else:               return df
 
 
-# remove duplicate columns when applying twice
-def add_one_hot_encoding(df, columns: list, min_pctg_to_keep=0.03, verbose=True):
+def create_one_hot_encoding(df, columns: list, min_pctg_to_keep=0.03, return_new_cols=True, verbose=True):
     """
     Adds one-hot encoded columns for each categorical column
     """
     max_col_length = len(max(columns, key=len))
     
+    new_cols = []
+    
     for column in columns:
-            
         #df[column]    = df[column].apply(lambda x: str(x)) #convert to str just in case
         #new_columns = [column + "_" + i for i in full[column].unique()] #only use the columns that appear in the test set and add prefix like in get_dummies
         if verbose: print('add one-hot-encodings:', column.ljust(max_col_length), end=' ')
@@ -131,7 +140,7 @@ def add_one_hot_encoding(df, columns: list, min_pctg_to_keep=0.03, verbose=True)
             print(' - too many unique values', df[column].nunique())
             break
         
-        one_hot_df = pd.get_dummies(df[column], prefix=f'cont_{column}__one_hot_')
+        one_hot_df = pd.get_dummies(df[column], prefix=f'ft_{column}__one_hot_')
         orig_col_number = len(one_hot_df.columns)
         
         keep_cols  = (one_hot_df.sum()/len(one_hot_df))>=min_pctg_to_keep
@@ -142,8 +151,13 @@ def add_one_hot_encoding(df, columns: list, min_pctg_to_keep=0.03, verbose=True)
         # drop columns if they already exist, in case function is called twice
         df = df.drop(one_hot_df.columns, axis=1, errors='ignore')
         df = pd.concat((df, one_hot_df), axis = 1)
-   
-    return df
+
+        new_cols.extend(list(one_hot_df.columns))
+    
+    new_cols = list(set(new_cols))
+    
+    if return_new_cols: return df, new_cols
+    else:               return df
 
 
 def target_encode_smooth_mean(df, catg_columns:list, target_col:str, train_index, 
@@ -166,7 +180,7 @@ def target_encode_smooth_mean(df, catg_columns:list, target_col:str, train_index
         smooth_mean = (counts*means + smoothing_factor*train_mean) / (counts + smoothing_factor)
         
         if isinstance(col, str):
-            new_column_name = f'cont_{col}__target_enc_mean_smooth{smoothing_factor}'    
+            new_column_name = f'ft_{col}__target_enc_mean_smooth{smoothing_factor}'    
             df[new_column_name] = df[col].map(smooth_mean)
 
             # Add noise
@@ -176,7 +190,7 @@ def target_encode_smooth_mean(df, catg_columns:list, target_col:str, train_index
 
         elif isinstance(col, list):
             col_str = '_'.join(col)
-            new_column_name = f'cont_{col_str}__target_enc_mean_smooth{smoothing_factor}'
+            new_column_name = f'ft_{col_str}__target_enc_mean_smooth{smoothing_factor}'
             # remove column if already exist from previous execution of same function to prevent merge-duplicates
             df = df.drop(new_column_name, axis=1, errors='ignore') 
             
