@@ -145,7 +145,7 @@ def memory_usage(df_or_series):
     return convert_bytes(size)
 
 ### features
-def get_features_list(df, prefix:str = 'cont', suffix:str=None, sort_results = True):
+def get_features_list(df, prefix:str = 'ft_', suffix:str=None, sort_results = True):
     """
     Returns list of continous or categorical features from DataFrame.
     :prefix: 'cont' or 'catg'
@@ -170,7 +170,7 @@ def clean_feature_names(df, include: 'list or all'='all', exclude:list = None) -
     - removes duplicate prefixes
     """
     if include=='all':
-        new_columns = [col.replace('cont_cont_', 'cont_').replace('-', '_') for col in df.columns]
+        new_columns = [col.replace('ft_ft_', 'ft_').replace('-', '_') for col in df.columns]
 
         df.columns = new_columns
     else:
@@ -186,3 +186,12 @@ def get_datetime_str(up_to='second'):
     s = s.replace('-', '').replace(' ', '_').replace(':', '')
     return s
 
+
+def round_to_nearest_int(value, base=25):
+    """
+    Rounds a number to the nearest base as integer value
+    """
+    try:
+        return int(base * round(float(value)/base))
+    except:
+        return np.nan
