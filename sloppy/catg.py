@@ -132,27 +132,28 @@ def create_one_hot_encoding(df, columns: list, min_pctg_to_keep=0.03, return_new
     
     new_cols = []
     
+    print('creating one-hot columns:')
     for column in columns:
         #df[column]    = df[column].apply(lambda x: str(x)) #convert to str just in case
         #new_columns = [column + "_" + i for i in full[column].unique()] #only use the columns that appear in the test set and add prefix like in get_dummies
-        if verbose: print('add one-hot-encodings:', column.ljust(max_col_length), end=' ')
+        if verbose: print('-', column.ljust(max_col_length), end=' ')
+        
         if df[column].nunique() > 500:
-            print(' - too many unique values', df[column].nunique())
-            break
-        
-        one_hot_df = pd.get_dummies(df[column], prefix=f'ft_{column}__one_hot_')
-        orig_col_number = len(one_hot_df.columns)
-        
-        keep_cols  = (one_hot_df.sum()/len(one_hot_df))>=min_pctg_to_keep
-        one_hot_df = one_hot_df.loc[:, keep_cols]
+            print('too many unique values', df[column].nunique())
+        else:    
+            one_hot_df = pd.get_dummies(df[column], prefix=f'ft_{column}__one_hot_')
+            orig_col_number = len(one_hot_df.columns)
+            
+            keep_cols  = (one_hot_df.sum()/len(one_hot_df))>=min_pctg_to_keep
+            one_hot_df = one_hot_df.loc[:, keep_cols]
 
-        if verbose: print(f' - keep {len(one_hot_df.columns)}/{orig_col_number} one-hot columns')
-   
-        # drop columns if they already exist, in case function is called twice
-        df = df.drop(one_hot_df.columns, axis=1, errors='ignore')
-        df = pd.concat((df, one_hot_df), axis = 1)
+            if verbose: print(f'keep {len(one_hot_df.columns)}/{orig_col_number} one-hot columns')
+    
+            # drop columns if they already exist, in case function is called twice
+            df = df.drop(one_hot_df.columns, axis=1, errors='ignore')
+            df = pd.concat((df, one_hot_df), axis = 1)
 
-        new_cols.extend(list(one_hot_df.columns))
+            new_cols.extend(list(one_hot_df.columns))
     
     new_cols = list(set(new_cols))
     
