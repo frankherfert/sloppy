@@ -2,14 +2,14 @@ import pandas as pd
 import numpy as np
 
 
-def add_cont_prefix(df, columns: list, drop_orig_cols=False, return_new_col_names=False, verbose=True):
+def create_feature_prefix(df, columns: list, drop_orig_cols=False, return_new_col_names=True, verbose=True):
     """
-    Adds a 'cont_' prefix to columns with continous features.
+    Adds a 'ft_' prefix to columns which can already be used as continous features.
     """
     new_column_names = []
 
     for col in columns:
-        new_col_name = 'cont_'+col
+        new_col_name = 'ft_'+col
         #col_name = col_name.replace('cont_cont_', 'cont_')
         df[new_col_name] = df[col]
         new_column_names.append(new_col_name)
@@ -20,15 +20,21 @@ def add_cont_prefix(df, columns: list, drop_orig_cols=False, return_new_col_name
         return df
 
 
-def add_log1p(df, columns: list, verbose=True):
+def create_log1p(df, columns: list, return_new_cols=True, verbose=True):
     """
+    Add column with log1p conversion of values. Useful for continous values with long tail distribution.
     """
     
+    new_cols = []
+    
     for col in columns:
-        new_column_name = 'cont_' + col + '__log1p' 
+        if col.startswith('ft_'): new_column_name =         col + '__log1p'
+        else:                     new_column_name = 'ft_' + col + '__log1p' 
         
         df[new_column_name] = np.log1p(df[col].clip(0,))
         
+        new_cols.append(new_column_name)
+            
         if verbose: print('added continous log1p column: ', 
                           '| min',  str( round(df[new_column_name].min(),2) ).rjust(5),
                           '| max',  str( round(df[new_column_name].max(),2) ).rjust(5),
@@ -37,32 +43,29 @@ def add_log1p(df, columns: list, verbose=True):
     return df
 
 
-def add_cut_percentile(df, columns: list, percentile=0.99, verbose=True):
+def create_cut_percentile(df, columns: list, percentile=0.99, return_new_cols=True, verbose=True):
     """
     Add new columns with original continous data clipped at specified percentile.
     Good for removing outlier for linear models.
     """
 
+    new_cols = []
+    
     for col in columns:
-        new_column_name = f'cont_{col}__pctl{percentile}'
+        if col.startswith('ft_'): new_column_name = f'{col}__pctl{percentile}'
+        else:                     new_column_name = f'ft_{col}__pctl{percentile}'
 
         percentile_value = df[col].quantile(percentile)
-        df[new_column_name] = df[col].clip(0, percentile_value)
+        df[new_column_name] = df[col].clip(None, percentile_value)
 
-    if verbose:
-        print('added', new_column_name, 'with upper clip at', percentile)
+        new_cols.append(new_column_name)
+        if verbose:
+            print('added', new_column_name, 'with upper clip at', percentile)
 
-    return df
+    if return_new_cols: return df, new_cols
+    else:               return df
 
 
-def round_to_nearest_int(value, base=25):
-    """
-    Rounds a number to the nearest base as integer value
-    """
-    try:
-        return int(base * round(float(value)/base))
-    except:
-        return np.nan
 
 
 
