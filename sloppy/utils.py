@@ -144,7 +144,14 @@ def memory_usage(df_or_series):
     
     return convert_bytes(size)
 
+
 ### features
+def get_catg_cols(df):
+    catg_cols = list(df.select_dtypes(include=['object', 'category']).columns)
+    
+    return catg_cols
+
+
 def get_features_list(df, prefix:str = 'ft_', suffix:str=None, sort_results = True):
     """
     Returns list of continous or categorical features from DataFrame.
