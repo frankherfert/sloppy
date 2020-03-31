@@ -5,16 +5,71 @@ import warnings
 from sklearn import preprocessing
 
 
+# ordinal (low, medium, high)
+# nominal (male, female, other)
+#
+#
+#
+#
+
+
+def create_column_combinations(df, col_combinations:list) -> pd.DataFrame:
+    """
+    Create columns with merged values from multiple columns.
+    col_combinations: list of lists, e.g. [ ['country', 'city'], ['prod_1', 'prod_2', 'prod3]]
+    """
+    
+    new_columns = []
+    
+    for col_combo in col_combinations:
+        if isinstance(col_combo, list):
+            new_column_name = '_'.join(col_combo)
+            new_columns.append(new_column_name)
+            
+            print('combining:', col_combo)
+            df[new_column_name] = df.loc[:, col_combo].apply(lambda l: '_'.join(l))
+    
+    return df, new_columns
+
+
+def create_high_cardinality_bins(df, columns:list, min_count:int = 20, verbose=True) -> pd.DataFrame:
+    """
+    Create new columns with bin-value for high cardinality values, e.g. post codes.
+    """
+    
+    new_columns = []
+    
+    df['tmp'] = 1
+
+    print('replacing high cardinility categories:')
+    print(f'{"columns".ljust(52)}| < min count ({min_count})')
+
+    for col in columns:
+        new_column_name = f'{col}__min_count_{min_count}'
+        new_columns.append(new_column_name)
+
+        print(f'- {col.ljust(50)}', end='|   ')
+        col_counts = df.groupby(col)['tmp'].transform("count")
+        df[new_column_name] = np.where(col_counts < min_count, 'OTHER_HIGH_CARDINALITY', df[col])
+
+        below_min_count = len(col_counts[col_counts<min_count])
+        print(str(below_min_count).rjust(14))
+    
+    df = df.drop('tmp', axis=1)
+    
+    return df, new_columns
+
+
 def convert_to_pd_catg(df, columns: list, verbose=True) -> pd.DataFrame:
     """
     Converts all columns to pandas categorical type.
     Enables additional functions and more memory-efficient data handling.
     """
-    if verbose: print('converting to categorical...')
+    if verbose: print('converting to categorical:')
     for col in columns:
         try:
             if verbose: print(f'- {col}', end=' ')
-            df[col]  = df[col].astype('category')
+            df[col] = df[col].astype('category')
             if verbose: print('ok')
         except:
             print(' error')
@@ -22,9 +77,8 @@ def convert_to_pd_catg(df, columns: list, verbose=True) -> pd.DataFrame:
     return df
 
 
-def create_count_encoding(df, column_combinations: list, scaler: 'sklearn.preprocessing. ...' = None,
-                       verbose = True, return_new_cols = True,
-                       drop_orig_cols=False) -> pd.DataFrame:
+def create_count_encoding(df, columns:list, scaler:'sklearn.preprocessing. ...' = None,
+                          verbose=True, drop_orig_cols=False) -> pd.DataFrame:
     """
     Expects a DataFrame with no missing values in specified columns.
     Creates new columns for every column combination (one or more columns to be combined).
@@ -39,23 +93,21 @@ def create_count_encoding(df, column_combinations: list, scaler: 'sklearn.prepro
     # create temporary column with no missing values, used for counting
     df['tmp'] = 1
     
-    new_cols = []
+    new_columns = []
     
     if verbose: print('adding categorical counts...')
-    for cols in column_combinations:
+    for col in columns:
         # set name suffix for new column
-        if isinstance(cols, list): var_name = '_'.join(cols)
-        else:                      var_name = cols
         
-        new_column_name = 'ft_' + var_name + '__count' 
-        if verbose: print(new_column_name.ljust(60), end = ' ')
+        new_column_name = 'ft_' + col + '__count' 
+        if verbose: print(f'- {new_column_name.ljust(60)}', end = ' ')
         
         # groupby count transform
-        counts = df.groupby(cols)['tmp'].transform('count').values.reshape(-1, 1)#.astype(int)
+        counts = df.groupby(col)['tmp'].transform('count').values.reshape(-1, 1)#.astype(int)
         
         if scaler:
             with warnings.catch_warnings():
-                warnings.simplefilter("ignore")     
+                warnings.simplefilter("ignore")
 
                 counts = scaler.fit_transform(counts); # suppress warnings
                 scaler_str = str(type(scaler)).split('.')[-1].split('Scaler')[0].split('Transformer')[0].lower()
@@ -63,65 +115,49 @@ def create_count_encoding(df, column_combinations: list, scaler: 'sklearn.prepro
             
         df[new_column_name] = counts
 
-        if verbose: print('unique', str( df[new_column_name].nunique() ).rjust(5), 
+        if verbose: print('unique', str( df[new_column_name].nunique() ).rjust(5),
                           '| min',  str( df[new_column_name].min()     ).rjust(5),
                           '| max',  str( df[new_column_name].max()     ).rjust(5))
         
-        if drop_orig_cols: df = df.drop(cols, axis=1)
+        if drop_orig_cols: df = df.drop(col, axis=1)
         
-        new_cols.append(new_column_name)
+        new_columns.append(new_column_name)
     
     df = df.drop('tmp', axis=1)
     
-    if return_new_cols: return df, new_cols
-    else:               return df
+    return df, new_columns
 
 
-def create_label_encoding(df, column_combinations: list, min_count = 5, 
-                       drop_orig_cols = False, return_new_cols = True, 
-                       verbose = True):
+def create_label_encoding(df, columns:list, drop_orig_cols = False, verbose = True):
     """
     Add numerical labels for categorical values.
     Values under a specified low total count are grouped together as '0'
     """
     #max_col_length = len(max(columns, key=len))
     
-    new_cols = []
+    new_columns = []
     
     df['tmp'] = 1
 
     if verbose: print('adding label encoding...')
     # set name suffix for new column
-    for col_combo in column_combinations:
-        col_str = '_'.join(col_combo) if isinstance(col_combo, list) else col_combo
-        new_column_name = 'ft_' + col_str + '__label'
-        new_cols.append(new_column_name)
+    for col in columns:
+        new_column_name = 'ft_' + col + '__label'
+        new_columns.append(new_column_name)
         
         if verbose: print('-', new_column_name.ljust(50), end=' ')
         
-        # if label encoding for column combination, use groupby.transform to get unique values per combination
-        # if single column, use values directly
-        if isinstance(col_combo, list):
-            column_values = df.groupby(col_combo)[col_combo[0]].transform(lambda series: random.random())
-        else:
-            column_values = df[col_combo].copy()
-                
-        # determine low-count outliers, replace with '00000'
-        col_counts = df.groupby(col_combo)['tmp'].transform("count")
-        column_values = np.where(col_counts < min_count, '00000', column_values)
-
-        # label encode remaining values
+        column_values = df[col].copy().values
         label_encoder = preprocessing.LabelEncoder()
         df[new_column_name] = label_encoder.fit_transform(column_values)
 
         if verbose: print('unique:', str(df[new_column_name].nunique()).ljust(7))
         
-        if drop_orig_cols: df = df.drop(col_combo, axis=1)
+        if drop_orig_cols: df = df.drop(col, axis=1)
     
     df = df.drop('tmp', axis=1)
 
-    if return_new_cols: return df, new_cols
-    else:               return df
+    return df, new_columns
 
 
 def create_one_hot_encoding(df, columns: list, min_pctg_to_keep=0.03, return_new_cols=True, verbose=True):
@@ -130,11 +166,10 @@ def create_one_hot_encoding(df, columns: list, min_pctg_to_keep=0.03, return_new
     """
     max_col_length = len(max(columns, key=len))
     
-    new_cols = []
+    new_columns = []
     
     print('creating one-hot columns:')
     for column in columns:
-        #df[column]    = df[column].apply(lambda x: str(x)) #convert to str just in case
         #new_columns = [column + "_" + i for i in full[column].unique()] #only use the columns that appear in the test set and add prefix like in get_dummies
         if verbose: print('-', column.ljust(max_col_length), end=' ')
         
@@ -153,12 +188,11 @@ def create_one_hot_encoding(df, columns: list, min_pctg_to_keep=0.03, return_new
             df = df.drop(one_hot_df.columns, axis=1, errors='ignore')
             df = pd.concat((df, one_hot_df), axis = 1)
 
-            new_cols.extend(list(one_hot_df.columns))
+            new_columns.extend(list(one_hot_df.columns))
     
     new_cols = list(set(new_cols))
     
-    if return_new_cols: return df, new_cols
-    else:               return df
+    return df, new_columns
 
 
 def target_encode_smooth_mean(df, catg_columns:list, target_col:str, train_index, 
@@ -222,3 +256,11 @@ def target_encode_smooth_mean(df, catg_columns:list, target_col:str, train_index
             print(f'added target encoding without noise:', new_column_name)
 
     return df
+
+
+
+
+
+
+
+
