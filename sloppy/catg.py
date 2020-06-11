@@ -4,14 +4,12 @@ import random
 import warnings
 from sklearn import preprocessing
 
-
 # ordinal (low, medium, high)
 # nominal (male, female, other)
 #
 #
 #
 #
-
 
 def create_column_combinations(df, col_combinations:list) -> pd.DataFrame:
     """
@@ -42,13 +40,13 @@ def create_high_cardinality_bins(df, columns:list, min_count:int = 20, verbose=T
     df['tmp'] = 1
 
     print('replacing high cardinility categories:')
-    print(f'{"columns".ljust(52)}| < min count ({min_count})')
+    print(f'{"columns".ljust(52)}| rows < min count ({min_count})')
 
     for col in columns:
         new_column_name = f'{col}__min_count_{min_count}'
         new_columns.append(new_column_name)
 
-        print(f'- {col.ljust(50)}', end='|   ')
+        print(f'- {col.ljust(50)}', end='|        ')
         col_counts = df.groupby(col)['tmp'].transform("count")
         df[new_column_name] = np.where(col_counts < min_count, 'OTHER_HIGH_CARDINALITY', df[col])
 
