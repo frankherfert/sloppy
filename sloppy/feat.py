@@ -1,7 +1,21 @@
 import pandas as pd
-#import numpy as np
+import numpy as np
 import eli5
 import shap
+
+
+def feat_importances_from_models(models:list, features:list):
+    model_importances = pd.DataFrame({'feature':features})
+
+    for counter, m in enumerate(models):
+        model_importances[f'imp_{counter}'] = m.feature_importances_
+
+    model_importances['imp_mean'] = model_importances.mean(axis=1)
+    model_importances['pctg']     = np.round(100 * model_importances['imp_mean'] / model_importances['imp_mean'].sum(), 4)
+
+    model_importances = model_importances.sort_values('imp_mean', ascending=False).reset_index(drop=True)
+
+    return model_importances
 
 
 def eli5_importance(est, importance_type='gain', rank=False) -> pd.DataFrame:
