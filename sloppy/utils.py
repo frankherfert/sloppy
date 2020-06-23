@@ -1,5 +1,7 @@
 import pandas as pd
+import numpy as np
 import os
+import re
 from IPython.core.display import display, HTML
 import datetime
 
@@ -8,7 +10,7 @@ def set_pd_options():
     options = {
         'display': {
             'max_columns': None,
-            'max_colwidth': 25,
+            'max_colwidth': 35,
             'expand_frame_repr': False,  # Don't wrap to multiple pages
             'max_rows': 200,
             'max_seq_items': 50,         # Max length of printed sequence
@@ -26,12 +28,11 @@ def set_pd_options():
     print('pandas options updated')
 
 
-def display_df(df, column_level=1):    
+def display_df(df, column_level=1):
     """
     requires 'from IPython.core.display import display, HTML'
     """
-    max_col_length = len(max(df.columns, key=len))
-    
+
     style = """
         <style>
         th.rotate {
@@ -40,7 +41,7 @@ def display_df(df, column_level=1):
         }
 
         th.rotate > div {
-            transform: 
+            transform:
                 translate(25px, 51px)
                 rotate(315deg);
             width: 30px;
@@ -50,16 +51,16 @@ def display_df(df, column_level=1):
             border-bottom: 1px solid #ccc;
             padding: 5px 10px;
         }
-        </style>""".replace('height_str', '140') #str(15*max_col_length))
+        </style>""".replace('height_str', '140')
 
     dfhtml = style + df.to_html()
 
     try:
         colnames = df.columns.get_level_values(column_level).values
-    except IndexError as e:
+    except IndexError:
         colnames = df.columns.values
 
-    for name in colnames:        
+    for name in colnames:
         dfhtml = dfhtml.replace('<th>{0}</th>'.format(name),
                                 '<th class="rotate"><div><span>{0}</span></div></th>'.format(name))
 
@@ -68,7 +69,7 @@ def display_df(df, column_level=1):
 
 def downcast_numeric_columns(df, columns=[]):
     """
-
+    Downcast all passed columns to most efficient numeric type.
     """
     numeric_columns = df.loc[:, columns].select_dtypes('number').columns.tolist()
     int_columns     = df.loc[:, columns].select_dtypes('int').columns.tolist()
@@ -83,7 +84,7 @@ def downcast_numeric_columns(df, columns=[]):
         elif col in float_columns:
             df[col] = pd.to_numeric(df[col], downcast="float")
         print(memory_usage(df[col]).rjust(8))
-        
+
     return df
 
 
@@ -91,14 +92,14 @@ def del_columns(df, columns):
     """
     Deletes columns one by one from the DataFrame. Easier to use during development compared to df.drop(columns)
     """
-    
+
     for column in columns:
         if column in df.columns:
             del df[column]
             print("Deleted:          ", column)
         else:
             print("Not in DataFrame: ",column)
-    
+
     return df
 
 
@@ -128,9 +129,9 @@ def show_path_file_sizes(path):
     """
     files = os.listdir(path)
     max_len = len(max(files, key=len))
-    
+
     for f in files:
-        print(f.ljust(max_len), get_file_size(f'{path}/{f}'))  
+        print(f.ljust(max_len), get_file_size(f'{path}/{f}'))
 
 
 def memory_usage(df_or_series):
@@ -141,31 +142,35 @@ def memory_usage(df_or_series):
         size = round(df_or_series.memory_usage(index=True, deep=True).sum(),2)
     elif type(df_or_series)==pd.core.frame.Series:
         size = round(df_or_series.memory_usage(index=True, deep=True),2)
-    
+
     return convert_bytes(size)
 
 
 ### features
 def get_catg_cols(df):
     catg_cols = list(df.select_dtypes(include=['object', 'category']).columns)
-    
+
     return catg_cols
 
 
-def get_features_list(df, prefix:str = 'ft_', suffix:str=None, sort_results = True):
+def get_features_list(df, contains:list=[], contains_not:list=[], sort_results = True, verbose=True):
     """
     Returns list of continous or categorical features from DataFrame.
-    :prefix: 'cont' or 'catg'
+    contains: must contain all strings in list
+    contains_not: must not contain any of strings in list
     """
-    
-    column_list = [col for col in df.columns if col.startswith(prefix)]
-    
-    if suffix:
-        column_list = [col for col in column_list
-                       if ((col.find(suffix)>0) or (col.endswith(suffix)))]
-    
-    if sort_results:
-        column_list = sorted(column_list)
+
+    column_list = [col for col in df.columns]
+
+    for s in contains:     column_list = [col for col in column_list if col.find(s)> -1]
+    for s in contains_not: column_list = [col for col in column_list if col.find(s)== -1]
+
+    if sort_results: column_list = sorted(column_list)
+        
+    if verbose:
+        print('found columns:', len(column_list))
+        diff = len(column_list) - len(list(set(column_list)))
+        if diff>0: print('found', diff, 'duplicate column names')
     
     return column_list
 
@@ -178,18 +183,18 @@ def clean_feature_names(df, include: 'list or all'='all', exclude:list = None) -
     """
     if include=='all':
         new_columns = [col.replace('ft_ft_', 'ft_').replace('-', '_') for col in df.columns]
-
+        new_columns = [re.sub('[^A-Za-z0-9_]+', '_', col) for col in new_columns]
         df.columns = new_columns
     else:
         print('not implemented yet')
-    
+
     return df
 
 ### rest
 def get_datetime_str(up_to='second'):
     if up_to=='second':
         s = str(datetime.datetime.now())[0:19]
-        
+
     s = s.replace('-', '').replace(' ', '_').replace(':', '')
     return s
 
