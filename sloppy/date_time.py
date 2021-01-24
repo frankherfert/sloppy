@@ -66,7 +66,7 @@ def add_datetime_features(df, datetime_columns: list, add_time_features=False, s
                     df[f'ft_{col}_{seasonal_part}_cos'] = np.round(np.cos(df[f'ft_{col}_{seasonal_part}']      * 2 * np.pi), 4)
                     df[f'ft_{col}_{seasonal_part}_sin'] = np.round(np.sin(df[f'ft_{col}_{seasonal_part}']      * 2 * np.pi), 4)
         
-        new_cols = [col for col in df.columns if col.find(f'ft_{col}_')==0]
+    new_cols = [col for col in df.columns if col.find(f'ft_{col}_')==0]
                 
     if return_new_cols: return df, new_cols
     else:               return df
