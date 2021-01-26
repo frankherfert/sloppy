@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 from sklearn import model_selection, metrics
 from fastprogress.fastprogress import progress_bar
-import datetime
-import gc
+
+from typing import Tuple
 
 
 def set_learning_rate_with_resets(
@@ -72,9 +72,9 @@ def set_learning_rate_with_resets(
 
 
 def predict_out_of_fold_sklearn(df, train_index, predict_index, target:str, features:list,
-                                n_splits:int = 5, preds_oof_col_suffix='_model_1',
+                                n_splits:int = 5, preds_oof_col_suffix:str ='_model_1',
                                 est=None, model_init_params:dict = None, model_fit_params:dict = None,
-                                verbose=True) -> pd.DataFrame:
+                                verbose=True) -> Tuple[pd.DataFrame, list]:
     """
     Creates out of fold predictions using sklearn estimators
     Returns: source df with added predictions, models
@@ -99,7 +99,7 @@ def predict_out_of_fold_sklearn(df, train_index, predict_index, target:str, feat
         y_valid = df.loc[train_index, target  ].iloc[fold_valid_index]
 
         print('train', x_train.shape, 'valid:', x_valid.shape, end='\t')
-        if 'verbose' in model_fit_params: print()
+        #if 'verbose' in model_fit_params: print()
 
         # init model
         model = est(**model_init_params)
@@ -121,28 +121,19 @@ def predict_out_of_fold_sklearn(df, train_index, predict_index, target:str, feat
 
         # predictions
         train_preds_oof = model.predict(x_valid)
-        predict_preds   = model.predict(df.loc[predict_index, features])
-        
         df.loc[train_index[fold_valid_index], oof_preds_col] = train_preds_oof
-        predict_preds_oof[f'pred_fold_{n_fold}'] = predict_preds
+        
+        if predict_index is not None:
+            predict_preds   = model.predict(df.loc[predict_index, features])
+            predict_preds_oof[f'pred_fold_{n_fold}'] = predict_preds
         
         if verbose:
             print(f'preds mean: {train_preds_oof.mean():.4f}', end=' | ')
             try: print('score:', model.best_score_)
             except: print()
 
-    predict_preds_oof = predict_preds_oof.mean(axis=1)
-    df.loc[predict_index, oof_preds_col] = predict_preds_oof
+    if predict_index is not None:
+        predict_preds_oof = predict_preds_oof.mean(axis=1)
+        df.loc[predict_index, oof_preds_col] = predict_preds_oof
 
     return df, models_trained
-
-
-def score_binary_predictions(y_true, y_pred):
-    y_pred_01 = np.round(y_pred, 0)
-    print("# \t",
-          "roc auc ↑:",     round(metrics.roc_auc_score( y_true=y_true, y_score= y_pred),    4),
-          "F1 ↑:",          round(metrics.f1_score(      y_true=y_true, y_pred=  y_pred_01), 4),
-          "\t accuracy ↑:", round(metrics.accuracy_score(y_true=y_true, y_pred=  y_pred_01), 4),
-          "\t log loss ↓:", round(metrics.log_loss(      y_true=y_true, y_pred=  y_pred),    4)
-         )
-

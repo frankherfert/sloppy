@@ -47,7 +47,7 @@ def add_isnull_columns(df, columns, min_percentage=0.01, return_new_cols=False, 
         return df
 
 
-def fillna_categorical(df, columns:list, fill_value:str = 'MISSING', verbose=True):
+def fillna_categorical(df, columns:list, fill_value:str = 'MISSING', return_new_cols=False, verbose=True):
     """
     Fillas categorical columns with values
     """
@@ -58,17 +58,17 @@ def fillna_categorical(df, columns:list, fill_value:str = 'MISSING', verbose=Tru
     return df
 
 
-def fillna_cont_static(df, columns: list, fill_value = -1, drop_orig_cols=False, verbose=True):
+def fillna_cont_static(df, columns: list, fill_value = -1, drop_orig_cols=False, 
+                       return_new_cols=False, verbose=True):
     """
     fillna continous columns with a static value.
     """
     max_col_length = len(max(columns, key=len))
     
-    if fill_value<0:
-        fill_value_str = f'fillna_neg{abs(fill_value)}'.replace('.', '_')
-    else:
-        fill_value_str = f'fillna_{fill_value}'
+    if fill_value<0: fill_value_str = f'fillna_neg{abs(fill_value)}'.replace('.', '_')
+    else:            fill_value_str = f'fillna_{fill_value}'
 
+    new_cols = []
     for column in columns:
         new_column_name = f'{column}__{fill_value_str}'
         try:
@@ -76,10 +76,12 @@ def fillna_cont_static(df, columns: list, fill_value = -1, drop_orig_cols=False,
             if verbose: print(f'fillna with \'{fill_value}\': {column.ljust(max_col_length)} -> {new_column_name}')
             if drop_orig_cols: 
                 df = df.drop(column, axis=1)
+            new_cols.append(new_column_name)
         except:
             print('Error for:', column)
     
-    return df
+    if return_new_cols: return df, new_cols
+    else:               return df
 
 
 def fillna_cont_groupby_value(df, columns: list, catg_groupby_columns: list, function = np.mean, drop_orig_cols=False, verbose = True):

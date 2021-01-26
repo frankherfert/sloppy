@@ -5,7 +5,8 @@ from pandas.api.types import is_numeric_dtype
 from datetime import date, datetime
 import calendar
 
-def add_datetime_features(df, datetime_columns: list, add_time_features=False, scale_0_to_1=True, cos_sin_transform=True, return_new_cols=True) -> pd.DataFrame:
+def add_datetime_features(df, datetime_columns: list, add_time_features=False, scale_0_to_1=True, 
+        cos_sin_transform=True, return_new_cols=True) -> pd.DataFrame:
     """
     Create common date and time features out of given datetime-columns.
     Optional to scale between 0 and 1.
